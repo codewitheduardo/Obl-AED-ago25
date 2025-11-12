@@ -21,7 +21,7 @@ public class Estacion {
         this.usuariosEnEsperaAnclaje = new ColaN();
         this.usuariosEnEsperaAlquiler = new ColaN();
     }
-    
+
     public Estacion(String nombre) {
         this.nombre = nombre;
     }
@@ -45,7 +45,7 @@ public class Estacion {
     public ColaN<Usuario> getUsuariosEnEsperaAlquiler() {
         return usuariosEnEsperaAlquiler;
     }
-    
+
     public ColaN<Usuario> getUsuariosEnEsperaAnclaje() {
         return usuariosEnEsperaAnclaje;
     }
@@ -59,13 +59,15 @@ public class Estacion {
         if (this == obj) {
             return true;
         }
-        if (obj == null) {
+        if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Estacion other = (Estacion) obj;
+        Estacion other = (Estacion) obj;
         return Objects.equals(this.nombre, other.nombre);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.nombre);
     }
 }

@@ -43,14 +43,16 @@ public class Usuario implements Comparable<Usuario> {
         if (this == obj) {
             return true;
         }
-        if (obj == null) {
+        if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Usuario other = (Usuario) obj;
+        Usuario other = (Usuario) obj;
         return Objects.equals(this.cedula, other.cedula);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.cedula);
     }
 
     @Override

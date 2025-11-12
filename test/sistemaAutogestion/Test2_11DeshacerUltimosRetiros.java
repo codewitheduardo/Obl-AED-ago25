@@ -45,6 +45,7 @@ public class Test2_11DeshacerUltimosRetiros {
 
         s.alquilarBicicleta("12345678", "Estacion01");
         s.alquilarBicicleta("87654321", "Estacion01");
+
         retorno = s.deshacerUltimosRetiros(10);
         assertEquals(Retorno.Resultado.OK, retorno.getResultado());
         assertEquals("BICI02#87654321#Estacion01|BICI01#12345678#Estacion01", retorno.getValorString());
@@ -58,5 +59,4 @@ public class Test2_11DeshacerUltimosRetiros {
         retorno = s.deshacerUltimosRetiros(-2);
         assertEquals(Retorno.Resultado.ERROR_1, retorno.getResultado());
     }
-
 }

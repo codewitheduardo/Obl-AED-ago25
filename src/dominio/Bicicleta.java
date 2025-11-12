@@ -13,7 +13,7 @@ public class Bicicleta implements Comparable<Bicicleta> {
         this.tipo = tipo;
         this.estado = "Disponible";
     }
-    
+
     public Bicicleta(String codigo) {
         this.codigo = codigo;
     }
@@ -38,20 +38,22 @@ public class Bicicleta implements Comparable<Bicicleta> {
     public String toString() {
         return this.codigo + "#" + this.tipo + "#" + this.estado;
     }
-    
+
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;
         }
-        if (obj == null) {
+        if (obj == null || getClass() != obj.getClass()) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final Bicicleta other = (Bicicleta) obj;
+        Bicicleta other = (Bicicleta) obj;
         return Objects.equals(this.codigo, other.codigo);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.codigo);
     }
 
     @Override

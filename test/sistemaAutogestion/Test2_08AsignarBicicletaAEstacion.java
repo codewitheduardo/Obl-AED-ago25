@@ -13,23 +13,18 @@ public class Test2_08AsignarBicicletaAEstacion {
     public void setUp() {
         s.crearSistemaDeGestion();
 
-        // Crear estaciones
-        s.registrarEstacion("Estacion01", "Barrio", 2); // con lugar libre
-        s.registrarEstacion("Estacion02", "Barrio", 1); // se llenará
-        s.registrarEstacion("Estacion03", "Barrio", 2); // estación destino para mover bici
+        s.registrarEstacion("Estacion01", "Barrio", 2); 
+        s.registrarEstacion("Estacion02", "Barrio", 1); 
+        s.registrarEstacion("Estacion03", "Barrio", 2); 
 
-        // Registrar bicicletas
-        s.registrarBicicleta("BICI01", "URBANA");     // disponible en depósito
-        s.registrarBicicleta("BICI02", "MOUNTAIN");   // disponible para mover
-        s.registrarBicicleta("BICI03", "ELECTRICA");  // no disponible (en mantenimiento)
+        s.registrarBicicleta("BICI01", "URBANA");     
+        s.registrarBicicleta("BICI02", "MOUNTAIN");   
+        s.registrarBicicleta("BICI03", "ELECTRICA");
 
-        // Llenar una estación (para probar ERROR_4)
         s.asignarBicicletaAEstacion("BICI01", "Estacion02");
 
-        // Poner una bici en mantenimiento (para ERROR_2)
         s.marcarEnMantenimiento("BICI03", "Rueda pinchada");
 
-        // Mover bici 222 a Est1 (para luego moverla a Est3)
         s.asignarBicicletaAEstacion("BICI02", "Estacion01");
     }
 

@@ -7,6 +7,7 @@ import dominio.Alquiler;
 import dominio.Bicicleta;
 import dominio.Estacion;
 import dominio.Usuario;
+import tads.ColaN;
 import tads.ListaN;
 import tads.ListaOrdenadaN;
 import tads.PilaN;
@@ -188,23 +189,25 @@ public class Sistema implements IObligatorio {
             return new Retorno(Retorno.Resultado.ERROR_1);
         }
 
-        Bicicleta obj = new Bicicleta(codigo);
-        Bicicleta encontrada = listaDeposito.obtenerElemento(obj);
+        Bicicleta biciBuscada = new Bicicleta(codigo);
+        Bicicleta biciEncontrada = listaDeposito.obtenerElemento(biciBuscada);
         boolean enEstacion = false;
         Estacion estacionOrigen = null;
 
-        if (encontrada == null) {
-            for (int i = 0; i < listaEstaciones.cantElementos() && !enEstacion; i++) {
+        if (biciEncontrada == null) {
+            int i = 0;
+            while (i < listaEstaciones.cantElementos() && !enEstacion) {
                 Estacion e = listaEstaciones.obtenerElementoDePos(i);
-                if (e.getBicicletasAncladas().existeElemento(obj)) {
-                    encontrada = e.getBicicletasAncladas().obtenerElemento(obj);
+                if (e.getBicicletasAncladas().existeElemento(biciBuscada)) {
+                    biciEncontrada = e.getBicicletasAncladas().obtenerElemento(biciBuscada);
                     enEstacion = true;
                     estacionOrigen = e;
                 }
+                i++;
             }
         }
 
-        if (encontrada == null || !encontrada.getEstado().equals("Disponible")) {
+        if (biciEncontrada == null || !biciEncontrada.getEstado().equals("Disponible")) {
             return new Retorno(Retorno.Resultado.ERROR_2);
         }
 
@@ -216,13 +219,12 @@ public class Sistema implements IObligatorio {
             return new Retorno(Retorno.Resultado.ERROR_4);
         }
 
-        if (!enEstacion) {
-            listaDeposito.borrarElemento(encontrada);
-        } else if (estacionOrigen != null) {
-            estacionOrigen.getBicicletasAncladas().borrarElemento(encontrada);
+        if (enEstacion && estacionOrigen != null) {
+            estacionOrigen.getBicicletasAncladas().borrarElemento(biciEncontrada);
+        } else {
+            listaDeposito.borrarElemento(biciEncontrada);
         }
-
-        estacionDestino.getBicicletasAncladas().agregarOrdenado(encontrada);
+        estacionDestino.getBicicletasAncladas().agregarOrdenado(biciEncontrada);
         return new Retorno(Retorno.Resultado.OK);
     }
 
@@ -252,12 +254,12 @@ public class Sistema implements IObligatorio {
 
             if (!estacion.getUsuariosEnEsperaAnclaje().esVacia()) {
                 Usuario enEspera = estacion.getUsuariosEnEsperaAnclaje().dequeue();
+
                 devolverBicicleta(enEspera.getCedula(), estacion.getNombre());
             }
         } else {
             estacion.getUsuariosEnEsperaAlquiler().enqueue(encontrado);
         }
-
         return new Retorno(Retorno.Resultado.OK);
     }
 
@@ -282,14 +284,13 @@ public class Sistema implements IObligatorio {
 
             PilaN<Alquiler> aux = new PilaN();
             boolean hayAlquiler = false;
-
             while (!historialAlquileres.esVacia() && !hayAlquiler) {
                 Alquiler a = historialAlquileres.pop();
-                if (a.getBicicleta().equals(biciDevuelta)) {
+                if (a.getBicicleta().equals(biciDevuelta) && !a.tieneEstacionDestino()) {
+                    a.setEstacionDestino(estacionDestino);
                     hayAlquiler = true;
-                } else {
-                    aux.push(a);
                 }
+                aux.push(a);
             }
 
             while (!aux.esVacia()) {
@@ -301,16 +302,16 @@ public class Sistema implements IObligatorio {
                 enEspera.setBicicletaAlquilada(biciDevuelta);
                 biciDevuelta.setEstado("Alquilada");
 
-                historialAlquileres.push(new Alquiler(enEspera, biciDevuelta, estacionDestino));
+                Alquiler nuevo = new Alquiler(enEspera, biciDevuelta, estacionDestino);
+                historialAlquileres.push(nuevo);
             } else {
-                estacionDestino.getBicicletasAncladas().agregarOrdenado(biciDevuelta);
                 biciDevuelta.setEstado("Disponible");
+                estacionDestino.getBicicletasAncladas().agregarOrdenado(biciDevuelta);
             }
             encontrado.setBicicletaAlquilada(null);
         } else {
             estacionDestino.getUsuariosEnEsperaAnclaje().enqueue(encontrado);
         }
-
         return new Retorno(Retorno.Resultado.OK);
     }
 
@@ -323,21 +324,42 @@ public class Sistema implements IObligatorio {
             n = historialAlquileres.size();
         }
 
+        PilaN<Alquiler> aux = new PilaN<>();
         String textoRetorno = "";
-        for (int i = 0; i < n; i++) {
+        int deshechos = 0;
+
+        while (deshechos < n && !historialAlquileres.esVacia()) {
             Alquiler alquiler = historialAlquileres.pop();
-            Usuario usuario = alquiler.getUsuario();
-            Estacion estacionOrigen = alquiler.getEstacionOrigen();
 
-            devolverBicicleta(usuario.getCedula(), estacionOrigen.getNombre());
+            if (!alquiler.tieneEstacionDestino()) {
+                Usuario usuario = alquiler.getUsuario();
+                Bicicleta bici = alquiler.getBicicleta();
+                Estacion estacionOrigen = alquiler.getEstacionOrigen();
 
-            if (textoRetorno.isEmpty()) {
-                textoRetorno = alquiler.toString();
+                usuario.setBicicletaAlquilada(null);
+
+                if (estacionOrigen.hayLugar()) {
+                    bici.setEstado("Disponible");
+                    estacionOrigen.getBicicletasAncladas().agregarOrdenado(bici);
+                } else {
+                    estacionOrigen.getUsuariosEnEsperaAnclaje().enqueue(usuario);
+                }
+
+                if (textoRetorno.isEmpty()) {
+                    textoRetorno = alquiler.toString();
+                } else {
+                    textoRetorno += "|" + alquiler.toString();
+                }
+
+                deshechos++;
             } else {
-                textoRetorno += "|" + alquiler.toString();
+                aux.push(alquiler);
             }
         }
 
+        while (!aux.esVacia()) {
+            historialAlquileres.push(aux.pop());
+        }
         return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 
@@ -359,7 +381,6 @@ public class Sistema implements IObligatorio {
         if (u == null) {
             return new Retorno(Retorno.Resultado.ERROR_3);
         }
-
         return new Retorno(Retorno.Resultado.OK, u.getNombre() + "#" + u.getCedula());
     }
 
@@ -372,13 +393,11 @@ public class Sistema implements IObligatorio {
         String textoRetorno = "";
         for (int i = 0; i < listaUsuarios.cantElementos(); i++) {
             Usuario u = listaUsuarios.obtenerElementoDePos(i);
-
             if (!textoRetorno.isEmpty()) {
                 textoRetorno += "|";
             }
             textoRetorno += u.toString();
         }
-
         return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 
@@ -455,40 +474,222 @@ public class Sistema implements IObligatorio {
         if (cantMaxima == 0) {
             donde = "ambas";
         }
-
         return new Retorno(Retorno.Resultado.OK, cantMaxima + "#" + donde + "|" + (creciente ? "existe" : "no existe"));
     }
 
     @Override
-    public Retorno listarBicicletasDeEstacion(String nombreEstacion
-    ) {
-        return Retorno.noImplementada();
+    public Retorno listarBicicletasDeEstacion(String nombreEstacion) {
+        Estacion e = listaEstaciones.obtenerElemento(new Estacion(nombreEstacion));
+
+        if (e.getBicicletasAncladas() == null || e.getBicicletasAncladas().esVacia()) {
+            return new Retorno(Retorno.Resultado.OK, "");
+        }
+
+        String textoRetorno = "";
+        for (int i = 0; i < e.getBicicletasAncladas().cantElementos(); i++) {
+            Bicicleta b = e.getBicicletasAncladas().obtenerElementoDePos(i);
+
+            if (!textoRetorno.isEmpty()) {
+                textoRetorno += "|";
+            }
+            textoRetorno += b.getCodigo();
+        }
+        return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 
     @Override
-    public Retorno estacionesConDisponibilidad(int n
-    ) {
-        return Retorno.noImplementada();
+    public Retorno estacionesConDisponibilidad(int n) {
+        if (n <= 1) {
+            return new Retorno(Retorno.Resultado.ERROR_1);
+        }
+
+        int cantEstaciones = 0;
+        for (int i = 0; i < listaEstaciones.cantElementos(); i++) {
+            Estacion e = listaEstaciones.obtenerElementoDePos(i);
+
+            int cantBicicletas = e.getBicicletasAncladas().cantElementos();
+            if (cantBicicletas > n) {
+                cantEstaciones++;
+            }
+        }
+        return Retorno.ok(cantEstaciones);
     }
 
     @Override
     public Retorno ocupacionPromedioXBarrio() {
-        return Retorno.noImplementada();
+        ListaOrdenadaN<String> barrios = new ListaOrdenadaN();
+
+        for (int i = 0; i < listaEstaciones.cantElementos(); i++) {
+            String barrio = listaEstaciones.obtenerElementoDePos(i).getBarrio();
+
+            if (!barrios.existeElemento(barrio)) {
+                barrios.agregarOrdenado(barrio);
+            }
+        }
+
+        String textoRetorno = "";
+        for (int i = 0; i < barrios.cantElementos(); i++) {
+            String barrio = barrios.obtenerElementoDePos(i);
+            int cantAnclajes = 0;
+            int capacidadTotal = 0;
+
+            for (int j = 0; j < listaEstaciones.cantElementos(); j++) {
+                Estacion e = listaEstaciones.obtenerElementoDePos(j);
+                if (barrio.equals(e.getBarrio())) {
+                    cantAnclajes += e.getBicicletasAncladas().cantElementos();
+                    capacidadTotal += e.getCapacidad();
+                }
+            }
+            double promedio = (cantAnclajes * 100.0) / capacidadTotal;
+            int porcentaje = (int) Math.round(promedio);
+
+            if (!textoRetorno.isEmpty()) {
+                textoRetorno += "|";
+            }
+            textoRetorno += barrio + "#" + porcentaje;
+        }
+        return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 
     @Override
     public Retorno rankingTiposPorUso() {
-        return Retorno.noImplementada();
+        int cantUrbana = 0;
+        int cantMountain = 0;
+        int cantElectrica = 0;
+
+        // Pila auxiliar para restaurar los alquileres al orden original
+        PilaN<Alquiler> aux = new PilaN<>();
+
+        // Contamos los alquileres por tipo de bicicleta
+        while (!historialAlquileres.esVacia()) {
+            Alquiler a = historialAlquileres.pop();
+            switch (a.getBicicleta().getTipo()) {
+                case "URBANA":
+                    cantUrbana++;
+                    break;
+                case "MOUNTAIN":
+                    cantMountain++;
+                    break;
+                case "ELECTRICA":
+                    cantElectrica++;
+                    break;
+            }
+            aux.push(a);  // Guardamos el alquiler para restaurarlo
+        }
+
+        // Restaurar el historial de alquileres
+        while (!aux.esVacia()) {
+            historialAlquileres.push(aux.pop());
+        }
+
+// Crear el resultado directamente sin usar StringBuilder ni append
+        String resultado = "";
+
+        // Comparar las cantidades para determinar el ranking sin usar sort
+        if (cantUrbana > cantMountain && cantUrbana > cantElectrica) {
+            resultado = "URBANA#" + cantUrbana;
+            if (cantMountain > cantElectrica) {
+                resultado += "|MOUNTAIN#" + cantMountain + "|ELECTRICA#" + cantElectrica;
+            } else if (cantMountain < cantElectrica) {
+                resultado += "|ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain;
+            } else {
+                resultado += "|ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain;
+            }
+        } else if (cantMountain > cantUrbana && cantMountain > cantElectrica) {
+            resultado = "MOUNTAIN#" + cantMountain;
+            if (cantUrbana > cantElectrica) {
+                resultado += "|URBANA#" + cantUrbana + "|ELECTRICA#" + cantElectrica;
+            } else if (cantUrbana < cantElectrica) {
+                resultado += "|ELECTRICA#" + cantElectrica + "|URBANA#" + cantUrbana;
+            } else {
+                resultado += "|ELECTRICA#" + cantElectrica + "|URBANA#" + cantUrbana;
+            }
+        } else if (cantElectrica > cantUrbana && cantElectrica > cantMountain) {
+            resultado = "ELECTRICA#" + cantElectrica;
+            if (cantUrbana > cantMountain) {
+                resultado += "|URBANA#" + cantUrbana + "|MOUNTAIN#" + cantMountain;
+            } else if (cantUrbana < cantMountain) {
+                resultado += "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
+            } else {
+                resultado += "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
+            }
+        } else {
+            // Caso de empate entre las cantidades
+            // Ordenar alfabéticamente en caso de empate
+            if (cantUrbana == cantMountain && cantUrbana == cantElectrica) {
+                resultado = "ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
+            } else if (cantUrbana == cantMountain) {
+                resultado = "MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana + "|ELECTRICA#" + cantElectrica;
+            } else if (cantMountain == cantElectrica) {
+                resultado = "ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
+            } else {
+                resultado = "URBANA#" + cantUrbana + "|MOUNTAIN#" + cantMountain + "|ELECTRICA#" + cantElectrica;
+            }
+        }
+
+        return new Retorno(Retorno.Resultado.OK, resultado);
     }
 
     @Override
     public Retorno usuariosEnEspera(String nombreEstacion
     ) {
-        return Retorno.noImplementada();
+        Estacion e = listaEstaciones.obtenerElemento(new Estacion(nombreEstacion));
+
+        if (e.getUsuariosEnEsperaAlquiler() == null || e.getUsuariosEnEsperaAlquiler().esVacia()) {
+            return new Retorno(Retorno.Resultado.OK, "");
+        }
+
+        String textoRetorno = "";
+        ColaN<Usuario> aux = new ColaN();
+        while (!e.getUsuariosEnEsperaAlquiler().esVacia()) {
+            Usuario u = e.getUsuariosEnEsperaAlquiler().dequeue();
+
+            if (!textoRetorno.isEmpty()) {
+                textoRetorno += "|";
+            }
+            textoRetorno += u.getCedula();
+
+            aux.enqueue(u);
+        }
+
+        while (!aux.esVacia()) {
+            e.getUsuariosEnEsperaAlquiler().enqueue(aux.dequeue());
+        }
+        return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 
     @Override
     public Retorno usuarioMayor() {
-        return Retorno.noImplementada();
+        String textoRetorno = "";
+        int cantUsuarioMayor = 0;
+
+        PilaN<Alquiler> aux = new PilaN<>();
+        for (int i = 0; i < listaUsuarios.cantElementos(); i++) {
+            Usuario u = listaUsuarios.obtenerElementoDePos(i);
+            int cantUsuario = 0;
+
+            while (!historialAlquileres.esVacia()) {
+                Alquiler a = historialAlquileres.pop();
+
+                if (u.equals(a.getUsuario())) {
+                    cantUsuario++;
+                }
+                aux.push(a);
+            }
+
+            while (!aux.esVacia()) {
+                historialAlquileres.push(aux.pop());
+            }
+
+            if (cantUsuario > cantUsuarioMayor) {
+                cantUsuarioMayor = cantUsuario;
+                textoRetorno = u.getCedula();
+            } else if (cantUsuario == cantUsuarioMayor) {
+                if (textoRetorno.equals("") || u.getCedula().compareTo(textoRetorno) < 0) {
+                    textoRetorno = u.getCedula();
+                }
+            }
+        }
+        return new Retorno(Retorno.Resultado.OK, textoRetorno);
     }
 }
