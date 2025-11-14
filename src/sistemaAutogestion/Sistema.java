@@ -180,7 +180,9 @@ public class Sistema implements IObligatorio {
         if (encontrada == null) {
             return new Retorno(Retorno.Resultado.ERROR_2);
         }
-        if (!encontrada.getBicicletasAncladas().esVacia() || !encontrada.getUsuariosEnEsperaAlquiler().esVacia()) {
+        if (!encontrada.getBicicletasAncladas().esVacia()
+                || !encontrada.getUsuariosEnEsperaAlquiler().esVacia()
+                || !encontrada.getUsuariosEnEsperaAnclaje().esVacia()) {
             return new Retorno(Retorno.Resultado.ERROR_3);
         }
 
@@ -282,7 +284,7 @@ public class Sistema implements IObligatorio {
             return new Retorno(Retorno.Resultado.ERROR_3);
         }
 
-        asignarEstacionDestinoEnAlquilerActivo(encontrado, estacionDestino);
+        asignarEstacionDestinoEnAlquiler(encontrado, estacionDestino);
 
         if (estacionDestino.hayLugar()) {
             Bicicleta biciDevuelta = encontrado.getBicicletaAlquilada();
@@ -685,7 +687,7 @@ public class Sistema implements IObligatorio {
         }
     }
 
-    private void asignarEstacionDestinoEnAlquilerActivo(Usuario u, Estacion estacionDestino) {
+    private void asignarEstacionDestinoEnAlquiler(Usuario u, Estacion estacionDestino) {
         PilaN<Alquiler> aux = new PilaN();
         boolean hayAlquiler = false;
 

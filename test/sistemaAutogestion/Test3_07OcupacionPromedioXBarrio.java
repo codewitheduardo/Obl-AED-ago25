@@ -74,5 +74,14 @@ public class Test3_07OcupacionPromedioXBarrio {
         assertEquals(Retorno.Resultado.OK, retorno.getResultado());
         assertEquals("Centro#17|Pocitos#0", retorno.getValorString());
     }
-}
 
+    @Test
+    public void barriosOrdenadosAlfabeticamente() {
+        s.registrarEstacion("Est4", "Zeta", 1);
+        s.registrarEstacion("Est5", "Aguada", 1);
+
+        retorno = s.ocupacionPromedioXBarrio();
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+        assertEquals("Aguada#0|Centro#0|Pocitos#0|Zeta#0", retorno.getValorString());
+    }
+}
