@@ -45,7 +45,6 @@ public class Test2_11DeshacerUltimosRetiros {
 
         s.alquilarBicicleta("12345678", "Estacion01");
         s.alquilarBicicleta("87654321", "Estacion01");
-
         retorno = s.deshacerUltimosRetiros(10);
         assertEquals(Retorno.Resultado.OK, retorno.getResultado());
         assertEquals("BICI02#87654321#Estacion01|BICI01#12345678#Estacion01", retorno.getValorString());
@@ -59,4 +58,41 @@ public class Test2_11DeshacerUltimosRetiros {
         retorno = s.deshacerUltimosRetiros(-2);
         assertEquals(Retorno.Resultado.ERROR_1, retorno.getResultado());
     }
+
+    @Test
+    public void noDeshacerAlquileresConEstacionDestino() {
+        s.devolverBicicleta("01234567", "Estacion02");
+
+        retorno = s.deshacerUltimosRetiros(3);
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+        assertEquals("BICI02#87654321#Estacion01|BICI01#12345678#Estacion01", retorno.getValorString());
+    }
+
+    @Test
+    public void usuarioQuedaEnColaEsperaAnclaje() {
+        s.registrarBicicleta("BICI04", "URBANA");
+        s.asignarBicicletaAEstacion("BICI04", "Estacion01");
+
+        // Ahora Estacion01 tiene capacidad 3 y 1 bici anclada:
+        // PERO necesitamos llenarla completamente.
+        // Entonces devolvemos dos bicis para llenar los 3 espacios:
+        s.devolverBicicleta("12345678", "Estacion01");
+        s.devolverBicicleta("87654321", "Estacion01");
+
+        retorno = s.deshacerUltimosRetiros(1);
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+        assertEquals("BICI03#01234567#Estacion01", retorno.getValorString());
+
+        // Si 01234567 está en la cola de espera de anclaje,
+        // cuando se libere un espacio debe anclarse automáticamente.
+        // Liberamos 1 anclaje
+        s.alquilarBicicleta("12345678", "Estacion01");
+
+        // Ahora la bici de 01234567 debe haberse anclado automáticamente
+        retorno = s.listarBicicletasDeEstacion("Estacion01");
+
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+        assertTrue(retorno.getValorString().contains("BICI03"));
+    }
+
 }

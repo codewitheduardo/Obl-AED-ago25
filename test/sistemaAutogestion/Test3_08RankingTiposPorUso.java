@@ -9,7 +9,6 @@ public class Test3_08RankingTiposPorUso {
     private Retorno retorno;
     private final IObligatorio s = new Sistema();
 
-    // Setup para preparar datos comunes antes de cada prueba
     @Before
     public void setUp() {
         s.crearSistemaDeGestion();
@@ -72,9 +71,9 @@ public class Test3_08RankingTiposPorUso {
         // URBANA: 3 alquileres
         s.alquilarBicicleta("11111111", "Est1");  // Ana alquila URBANA
         s.devolverBicicleta("11111111", "Est1");
-        s.alquilarBicicleta("11111111", "Est1");  // Ana alquila URBANA
+        s.alquilarBicicleta("11111111", "Est1"); 
         s.devolverBicicleta("11111111", "Est1");
-        s.alquilarBicicleta("11111111", "Est1");  // Ana alquila URBANA
+        s.alquilarBicicleta("11111111", "Est1");  
         s.devolverBicicleta("11111111", "Est1");
 
         // MOUNTAIN: 1 alquiler
@@ -84,7 +83,7 @@ public class Test3_08RankingTiposPorUso {
         // ELECTRICA: 2 alquileres
         s.alquilarBicicleta("33333333", "Est3");  // Mia alquila ELECTRICA
         s.devolverBicicleta("33333333", "Est3");
-        s.alquilarBicicleta("33333333", "Est3");  // Mia alquila ELECTRICA
+        s.alquilarBicicleta("33333333", "Est3"); 
         s.devolverBicicleta("33333333", "Est3");
 
         retorno = s.rankingTiposPorUso();
@@ -97,13 +96,13 @@ public class Test3_08RankingTiposPorUso {
         // URBANA: 2 alquileres
         s.alquilarBicicleta("11111111", "Est1");  // Ana alquila URBANA
         s.devolverBicicleta("11111111", "Est1");
-        s.alquilarBicicleta("11111111", "Est1");  // Ana alquila URBANA
+        s.alquilarBicicleta("11111111", "Est1");
         s.devolverBicicleta("11111111", "Est1");
 
         // MOUNTAIN: 2 alquileres
         s.alquilarBicicleta("22222222", "Est2");  // Luis alquila MOUNTAIN
         s.devolverBicicleta("22222222", "Est2");
-        s.alquilarBicicleta("22222222", "Est2");  // Luis alquila MOUNTAIN
+        s.alquilarBicicleta("22222222", "Est2");
         s.devolverBicicleta("22222222", "Est2");
 
         // ELECTRICA: 1 alquiler

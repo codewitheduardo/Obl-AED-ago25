@@ -60,4 +60,31 @@ public class Test2_10DevolverBicicleta {
         retorno = s.devolverBicicleta("12345678", "NoExiste");
         assertEquals(Retorno.Resultado.ERROR_3, retorno.getResultado());
     }
+
+    @Test
+    public void devolverSinLugarUsuarioQuedaEnEsperaDeAnclaje() {
+        s.registrarBicicleta("BICI02", "URBANA");
+        s.asignarBicicletaAEstacion("BICI02", "Estacion02");
+
+        s.registrarBicicleta("BICI03", "URBANA");
+        s.asignarBicicletaAEstacion("BICI03", "Estacion02");
+
+        retorno = s.devolverBicicleta("12345678", "Estacion02");
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+
+        retorno = s.listarBicicletasDeEstacion("Estacion02");
+        assertEquals("BICI02|BICI03", retorno.getValorString());
+    }
+
+    @Test
+    public void devolverConUsuariosEnEsperaAsignaAutomatico() {
+        s.registrarUsuario("87654321", "Usuario02");
+        s.alquilarBicicleta("87654321", "Estacion01");
+
+        retorno = s.devolverBicicleta("12345678", "Estacion01");
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+
+        retorno = s.usuariosEnEspera("Estacion01");
+        assertEquals("", retorno.getValorString());
+    }
 }

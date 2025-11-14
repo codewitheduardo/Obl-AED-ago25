@@ -26,7 +26,7 @@ public class Test3_06EstacionesConDisponibilidad {
     }
 
     @Test
-    public void estacionesConDisponibilidadErrorNMenorIgualUno() {
+    public void estacionesConDisponibilidadError01() {
         retorno = s.estacionesConDisponibilidad(1);
         assertEquals(Retorno.Resultado.ERROR_1, retorno.getResultado());
 

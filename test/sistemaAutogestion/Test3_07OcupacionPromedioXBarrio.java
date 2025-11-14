@@ -13,12 +13,10 @@ public class Test3_07OcupacionPromedioXBarrio {
     public void setUp() {
         s.crearSistemaDeGestion();
 
-        // Estaciones necesarias
         s.registrarEstacion("Est1", "Centro", 4);   // Capacidad total Centro = 4 + 2 = 6
         s.registrarEstacion("Est2", "Centro", 2);
         s.registrarEstacion("Est3", "Pocitos", 5);  // Capacidad total Pocitos = 5
 
-        // Bicicletas
         s.registrarBicicleta("BICI01", "URBANA");
         s.registrarBicicleta("BICI02", "URBANA");
         s.registrarBicicleta("BICI03", "URBANA");

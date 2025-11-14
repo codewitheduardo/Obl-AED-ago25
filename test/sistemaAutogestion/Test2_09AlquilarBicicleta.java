@@ -55,4 +55,26 @@ public class Test2_09AlquilarBicicleta {
         retorno = s.alquilarBicicleta("12345678", "NoExiste");
         assertEquals(Retorno.Resultado.ERROR_3, retorno.getResultado());
     }
+
+    @Test
+    public void alquilarSinBicicletasUsuarioQuedaEnEspera() {
+        s.alquilarBicicleta("12345678", "Estacion01");
+
+        retorno = s.alquilarBicicleta("87654321", "Estacion01");
+        assertEquals(Retorno.Resultado.OK, retorno.getResultado());
+        
+        retorno = s.usuariosEnEspera("Estacion01");
+        assertEquals("87654321", retorno.getValorString());
+    }
+
+    @Test
+    public void usuarioEnEsperaRecibeBicicletaAlLiberarse() {
+        s.alquilarBicicleta("12345678", "Estacion01"); 
+        s.alquilarBicicleta("87654321", "Estacion01");
+
+        s.devolverBicicleta("12345678", "Estacion01");
+
+        retorno = s.usuariosEnEspera("Estacion01");
+        assertEquals("", retorno.getValorString());
+    }
 }

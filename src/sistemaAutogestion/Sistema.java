@@ -18,12 +18,14 @@ public class Sistema implements IObligatorio {
     private ListaN<Estacion> listaEstaciones;
     private ListaN<Bicicleta> listaDeposito;
     private PilaN<Alquiler> historialAlquileres;
+    private int[] contRanking;
 
     public Sistema() {
         this.listaUsuarios = new ListaOrdenadaN();
         this.listaEstaciones = new ListaN();
         this.listaDeposito = new ListaN();
         this.historialAlquileres = new PilaN();
+        this.contRanking = new int[]{0, 0, 0};
     }
 
     @Override
@@ -32,6 +34,7 @@ public class Sistema implements IObligatorio {
         this.listaEstaciones = new ListaN();
         this.listaDeposito = new ListaN();
         this.historialAlquileres = new PilaN();
+        this.contRanking = new int[]{0, 0, 0};
 
         return new Retorno(Retorno.Resultado.OK);
     }
@@ -140,10 +143,12 @@ public class Sistema implements IObligatorio {
                 e.getBicicletasAncladas().borrarElemento(obj);
                 encontrada.setEstado("Mantenimiento");
                 listaDeposito.agregarFinal(encontrada);
+
+                procesarUsuariosEnEsperaDeAnclaje(e);
+
                 return new Retorno(Retorno.Resultado.OK);
             }
         }
-
         return new Retorno(Retorno.Resultado.ERROR_2);
     }
 
@@ -252,11 +257,9 @@ public class Sistema implements IObligatorio {
 
             historialAlquileres.push(new Alquiler(encontrado, bici, estacion));
 
-            if (!estacion.getUsuariosEnEsperaAnclaje().esVacia()) {
-                Usuario enEspera = estacion.getUsuariosEnEsperaAnclaje().dequeue();
+            incrementarContadorPorTipo(bici);
 
-                devolverBicicleta(enEspera.getCedula(), estacion.getNombre());
-            }
+            procesarUsuariosEnEsperaDeAnclaje(estacion);
         } else {
             estacion.getUsuariosEnEsperaAlquiler().enqueue(encontrado);
         }
@@ -279,23 +282,10 @@ public class Sistema implements IObligatorio {
             return new Retorno(Retorno.Resultado.ERROR_3);
         }
 
+        asignarEstacionDestinoEnAlquilerActivo(encontrado, estacionDestino);
+
         if (estacionDestino.hayLugar()) {
             Bicicleta biciDevuelta = encontrado.getBicicletaAlquilada();
-
-            PilaN<Alquiler> aux = new PilaN();
-            boolean hayAlquiler = false;
-            while (!historialAlquileres.esVacia() && !hayAlquiler) {
-                Alquiler a = historialAlquileres.pop();
-                if (a.getBicicleta().equals(biciDevuelta) && !a.tieneEstacionDestino()) {
-                    a.setEstacionDestino(estacionDestino);
-                    hayAlquiler = true;
-                }
-                aux.push(a);
-            }
-
-            while (!aux.esVacia()) {
-                historialAlquileres.push(aux.pop());
-            }
 
             if (!estacionDestino.getUsuariosEnEsperaAlquiler().esVacia()) {
                 Usuario enEspera = estacionDestino.getUsuariosEnEsperaAlquiler().dequeue();
@@ -304,6 +294,8 @@ public class Sistema implements IObligatorio {
 
                 Alquiler nuevo = new Alquiler(enEspera, biciDevuelta, estacionDestino);
                 historialAlquileres.push(nuevo);
+
+                incrementarContadorPorTipo(biciDevuelta);
             } else {
                 biciDevuelta.setEstado("Disponible");
                 estacionDestino.getBicicletasAncladas().agregarOrdenado(biciDevuelta);
@@ -336,14 +328,15 @@ public class Sistema implements IObligatorio {
                 Bicicleta bici = alquiler.getBicicleta();
                 Estacion estacionOrigen = alquiler.getEstacionOrigen();
 
-                usuario.setBicicletaAlquilada(null);
-
                 if (estacionOrigen.hayLugar()) {
                     bici.setEstado("Disponible");
                     estacionOrigen.getBicicletasAncladas().agregarOrdenado(bici);
+                    usuario.setBicicletaAlquilada(null);
                 } else {
                     estacionOrigen.getUsuariosEnEsperaAnclaje().enqueue(usuario);
                 }
+
+                decrementarContadorPorTipo(bici);
 
                 if (textoRetorno.isEmpty()) {
                     textoRetorno = alquiler.toString();
@@ -356,7 +349,6 @@ public class Sistema implements IObligatorio {
                 aux.push(alquiler);
             }
         }
-
         while (!aux.esVacia()) {
             historialAlquileres.push(aux.pop());
         }
@@ -506,8 +498,8 @@ public class Sistema implements IObligatorio {
         int cantEstaciones = 0;
         for (int i = 0; i < listaEstaciones.cantElementos(); i++) {
             Estacion e = listaEstaciones.obtenerElementoDePos(i);
-
             int cantBicicletas = e.getBicicletasAncladas().cantElementos();
+
             if (cantBicicletas > n) {
                 cantEstaciones++;
             }
@@ -553,86 +545,49 @@ public class Sistema implements IObligatorio {
 
     @Override
     public Retorno rankingTiposPorUso() {
-        int cantUrbana = 0;
-        int cantMountain = 0;
-        int cantElectrica = 0;
+        int cantUrbana = contRanking[2];
+        int cantMountain = contRanking[1];
+        int cantElectrica = contRanking[0];
 
-        // Pila auxiliar para restaurar los alquileres al orden original
-        PilaN<Alquiler> aux = new PilaN<>();
+        String tipo1 = "URBANA";
+        int c1 = cantUrbana;
+        String tipo2 = "MOUNTAIN";
+        int c2 = cantMountain;
+        String tipo3 = "ELECTRICA";
+        int c3 = cantElectrica;
 
-        // Contamos los alquileres por tipo de bicicleta
-        while (!historialAlquileres.esVacia()) {
-            Alquiler a = historialAlquileres.pop();
-            switch (a.getBicicleta().getTipo()) {
-                case "URBANA":
-                    cantUrbana++;
-                    break;
-                case "MOUNTAIN":
-                    cantMountain++;
-                    break;
-                case "ELECTRICA":
-                    cantElectrica++;
-                    break;
-            }
-            aux.push(a);  // Guardamos el alquiler para restaurarlo
+        if (c2 > c1 || (c2 == c1 && tipo2.compareTo(tipo1) < 0)) {
+            int tempCant = c1;
+            c1 = c2;
+            c2 = tempCant;
+            String tempTipo = tipo1;
+            tipo1 = tipo2;
+            tipo2 = tempTipo;
+        }
+        if (c3 > c1 || (c3 == c1 && tipo3.compareTo(tipo1) < 0)) {
+            int tempCant = c1;
+            c1 = c3;
+            c3 = tempCant;
+            String tempTipo = tipo1;
+            tipo1 = tipo3;
+            tipo3 = tempTipo;
+        }
+        if (c3 > c2 || (c3 == c2 && tipo3.compareTo(tipo2) < 0)) {
+            int tempCant = c2;
+            c2 = c3;
+            c3 = tempCant;
+            String tempTipo = tipo2;
+            tipo2 = tipo3;
+            tipo3 = tempTipo;
         }
 
-        // Restaurar el historial de alquileres
-        while (!aux.esVacia()) {
-            historialAlquileres.push(aux.pop());
-        }
-
-// Crear el resultado directamente sin usar StringBuilder ni append
-        String resultado = "";
-
-        // Comparar las cantidades para determinar el ranking sin usar sort
-        if (cantUrbana > cantMountain && cantUrbana > cantElectrica) {
-            resultado = "URBANA#" + cantUrbana;
-            if (cantMountain > cantElectrica) {
-                resultado += "|MOUNTAIN#" + cantMountain + "|ELECTRICA#" + cantElectrica;
-            } else if (cantMountain < cantElectrica) {
-                resultado += "|ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain;
-            } else {
-                resultado += "|ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain;
-            }
-        } else if (cantMountain > cantUrbana && cantMountain > cantElectrica) {
-            resultado = "MOUNTAIN#" + cantMountain;
-            if (cantUrbana > cantElectrica) {
-                resultado += "|URBANA#" + cantUrbana + "|ELECTRICA#" + cantElectrica;
-            } else if (cantUrbana < cantElectrica) {
-                resultado += "|ELECTRICA#" + cantElectrica + "|URBANA#" + cantUrbana;
-            } else {
-                resultado += "|ELECTRICA#" + cantElectrica + "|URBANA#" + cantUrbana;
-            }
-        } else if (cantElectrica > cantUrbana && cantElectrica > cantMountain) {
-            resultado = "ELECTRICA#" + cantElectrica;
-            if (cantUrbana > cantMountain) {
-                resultado += "|URBANA#" + cantUrbana + "|MOUNTAIN#" + cantMountain;
-            } else if (cantUrbana < cantMountain) {
-                resultado += "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
-            } else {
-                resultado += "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
-            }
-        } else {
-            // Caso de empate entre las cantidades
-            // Ordenar alfabéticamente en caso de empate
-            if (cantUrbana == cantMountain && cantUrbana == cantElectrica) {
-                resultado = "ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
-            } else if (cantUrbana == cantMountain) {
-                resultado = "MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana + "|ELECTRICA#" + cantElectrica;
-            } else if (cantMountain == cantElectrica) {
-                resultado = "ELECTRICA#" + cantElectrica + "|MOUNTAIN#" + cantMountain + "|URBANA#" + cantUrbana;
-            } else {
-                resultado = "URBANA#" + cantUrbana + "|MOUNTAIN#" + cantMountain + "|ELECTRICA#" + cantElectrica;
-            }
-        }
+        String resultado = tipo1 + "#" + c1 + "|" + tipo2 + "#" + c2 + "|" + tipo3 + "#" + c3;
 
         return new Retorno(Retorno.Resultado.OK, resultado);
     }
 
     @Override
-    public Retorno usuariosEnEspera(String nombreEstacion
-    ) {
+    public Retorno usuariosEnEspera(String nombreEstacion) {
         Estacion e = listaEstaciones.obtenerElemento(new Estacion(nombreEstacion));
 
         if (e.getUsuariosEnEsperaAlquiler() == null || e.getUsuariosEnEsperaAlquiler().esVacia()) {
@@ -651,7 +606,6 @@ public class Sistema implements IObligatorio {
 
             aux.enqueue(u);
         }
-
         while (!aux.esVacia()) {
             e.getUsuariosEnEsperaAlquiler().enqueue(aux.dequeue());
         }
@@ -676,7 +630,6 @@ public class Sistema implements IObligatorio {
                 }
                 aux.push(a);
             }
-
             while (!aux.esVacia()) {
                 historialAlquileres.push(aux.pop());
             }
@@ -691,5 +644,62 @@ public class Sistema implements IObligatorio {
             }
         }
         return new Retorno(Retorno.Resultado.OK, textoRetorno);
+    }
+
+    private void procesarUsuariosEnEsperaDeAnclaje(Estacion e) {
+        while (e.hayLugar() && !e.getUsuariosEnEsperaAnclaje().esVacia()) {
+            Usuario u = e.getUsuariosEnEsperaAnclaje().dequeue();
+            Bicicleta biciPendiente = u.getBicicletaAlquilada();
+
+            biciPendiente.setEstado("Disponible");
+            e.getBicicletasAncladas().agregarOrdenado(biciPendiente);
+            u.setBicicletaAlquilada(null);
+        }
+    }
+
+    private void incrementarContadorPorTipo(Bicicleta b) {
+        switch (b.getTipo()) {
+            case "URBANA":
+                contRanking[2]++;
+                break;
+            case "MOUNTAIN":
+                contRanking[1]++;
+                break;
+            case "ELECTRICA":
+                contRanking[0]++;
+                break;
+        }
+    }
+
+    private void decrementarContadorPorTipo(Bicicleta b) {
+        switch (b.getTipo()) {
+            case "URBANA":
+                contRanking[2]--;
+                break;
+            case "MOUNTAIN":
+                contRanking[1]--;
+                break;
+            case "ELECTRICA":
+                contRanking[0]--;
+                break;
+        }
+    }
+
+    private void asignarEstacionDestinoEnAlquilerActivo(Usuario u, Estacion estacionDestino) {
+        PilaN<Alquiler> aux = new PilaN();
+        boolean hayAlquiler = false;
+
+        while (!historialAlquileres.esVacia() && !hayAlquiler) {
+            Alquiler a = historialAlquileres.pop();
+            if (a.getBicicleta().equals(u.getBicicletaAlquilada()) && !a.tieneEstacionDestino()) {
+                a.setEstacionDestino(estacionDestino);
+                hayAlquiler = true;
+            }
+            aux.push(a);
+        }
+
+        while (!aux.esVacia()) {
+            historialAlquileres.push(aux.pop());
+        }
     }
 }

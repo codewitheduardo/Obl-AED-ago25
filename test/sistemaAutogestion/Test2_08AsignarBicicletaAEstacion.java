@@ -65,7 +65,7 @@ public class Test2_08AsignarBicicletaAEstacion {
     }
 
     @Test
-    public void asignarBicicletaAEstacionErrorSinLugar() {
+    public void asignarBicicletaAEstacionError04() {
         retorno = s.asignarBicicletaAEstacion("BICI01", "Estacion02");
         assertEquals(Retorno.Resultado.ERROR_4, retorno.getResultado());
     }
